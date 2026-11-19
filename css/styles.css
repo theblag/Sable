@@ -361,6 +361,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
   font-size: 1.125rem;
   white-space: nowrap;
 }
+.card__price-num { display: inline-block; font-variant-numeric: tabular-nums; }
+.cart-fly { /* the dot that hops into the order button */
+  position: fixed; left: 0; top: 0; z-index: 100;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--raspberry);
+  box-shadow: 0 4px 8px -2px rgba(43, 23, 16, 0.35);
+  pointer-events: none;
+}
 .card__desc { margin-top: 8px; color: var(--cocoa-76); max-width: 40ch; }
 .card__add { margin-top: auto; align-self: flex-start; }
 .card__desc + .card__add { margin-top: 20px; }
@@ -478,7 +486,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* First cut — signature scroll sequence */
 .firstcut { padding-block: calc(var(--rb-h) / 2 + 40px) var(--section-pad); }
-.firstcut__inner { display: grid; gap: 24px; }
+.firstcut__inner { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); } /* minmax: the square panel must never set the column wider than the screen */
 .firstcut__title {
   display: grid;
   font-size: clamp(4rem, 19vw, 6rem);
@@ -508,7 +516,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   
   border-radius: var(--r-xl);
   overflow: hidden;
-  background: #FBF6F0;
+  background: #fbf0f6a9;
   box-shadow: 0 34px 60px -34px rgba(43, 23, 16, 0.45), 0 2px 0 rgba(43, 23, 16, 0.04);
 }
 .firstcut__cakebox {
@@ -548,7 +556,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   }
 }
 @media (min-width: 768px) and (max-width: 1023px) {
-  .firstcut__inner { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); height: 100svh; align-items: stretch; }
+  .firstcut__inner { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); height: 100svh; align-items: stretch; }
   .firstcut__panel { height: auto; min-height: 0; margin-bottom: 7%; }
   .firstcut__title { font-size: 6.5rem; }
 }
@@ -569,6 +577,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .story__hero img { width: 100%; height: 100%; object-fit: cover; object-position: 62% 50%; }
 .story__copy { display: flex; flex-direction: column; gap: clamp(28px, 3vw, 40px); }
 .story__points { display: grid; gap: 28px; }
+.story__point { position: relative; padding-left: 20px; }
+.story__point::before { /* a piped raspberry rule that draws down beside each point */
+  content: ""; position: absolute; left: 0; top: 0.3em; bottom: 0.2em;
+  width: 3px; border-radius: 3px;
+  background: var(--raspberry);
+  transform-origin: top center;
+  scale: 1 var(--rule, 1);
+}
 .story__point h3 {
   font-family: var(--font-display);
   font-weight: 700;
@@ -693,7 +709,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
   letter-spacing: -0.03em;
   line-height: 1.06;
 }
-.quote figcaption { margin-top: 16px; font-weight: 600; font-size: 0.9375rem; }
+.quote figcaption { margin-top: 16px; font-weight: 600; font-size: 0.9375rem; display: flex; align-items: center; gap: 10px; }
+.quote figcaption::before {
+  content: ""; width: 24px; height: 2px; border-radius: 2px; flex: none;
+  background: var(--raspberry);
+  transform-origin: left center;
+  scale: var(--dash, 1) 1;
+}
 @media (min-width: 900px) {
   .reviews__grid {
     grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);

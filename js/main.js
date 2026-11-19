@@ -366,6 +366,179 @@
     el.appendChild(frag);
   }
 
+
+  /* ---------------- Lower sections: Pick your cake, story, custom orders, reviews, footer ---------------- */
+  function sectionMotion() {
+    var cleanups = [];
+    var finePointer = window.matchMedia('(pointer: fine)').matches;
+
+    /* Pick your cake — cards deal in like a hand of cards, photos open, prices count up */
+    var cards = q('.cakes .card');
+    cards.forEach(function (card, i) {
+      // price: an animated copy for the eye, the real figure kept for screen readers
+      var price = card.querySelector('.card__price');
+      if (price && !price.dataset.split) {
+        price.dataset.split = '1';
+        var text = price.textContent.trim();
+        price.innerHTML = '<span class="visually-hidden">' + text + '</span><span class="card__price-num" aria-hidden="true">' + text + '</span>';
+        price.dataset.value = text.replace(/[^\d]/g, '');
+      }
+    });
+    ScrollTrigger.batch('.cakes .card', {
+      start: 'top 90%',
+      once: true,
+      onEnter: function (els) {
+        els.forEach(function (card, i) {
+          var tl = gsap.timeline({ delay: i * 0.11, defaults: { ease: 'power3.out' } });
+          var tilt = (cards.indexOf(card) % 2 ? 1 : -1) * 3;
+          tl.fromTo(card, { opacity: 0, y: 70, rotation: tilt, transformOrigin: '50% 100%' }, { opacity: 1, y: 0, rotation: 0, duration: 1 }, 0);
+          var media = card.querySelector('.card__media');
+          var img = media && media.querySelector('img');
+          if (media) tl.fromTo(media, { clipPath: 'inset(22% 10% 0% 10% round 24px)' }, { clipPath: 'inset(0% 0% 0% 0% round 24px)', duration: 1.1, clearProps: 'clipPath' }, 0.05);
+          if (img) tl.fromTo(img, { scale: 1.22 }, { scale: 1, duration: 1.5 }, 0.05);
+          tl.fromTo(card.querySelectorAll('.card__name, .card__desc, .card__add'), { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.07 }, 0.35);
+          var num = card.querySelector('.card__price-num');
+          var target = parseInt(card.querySelector('.card__price').dataset.value, 10);
+          if (num && target) {
+            var counter = { v: 0 };
+            tl.to(counter, {
+              v: target, duration: 1.1, ease: 'power2.out',
+              onUpdate: function () { num.textContent = '₹' + (Math.round(counter.v / 10) * 10).toLocaleString('en-IN'); },
+              onComplete: function () { num.textContent = '₹' + target.toLocaleString('en-IN'); }
+            }, 0.35);
+          }
+        });
+      }
+    });
+
+    // Card photos lean toward the cursor (desktop)
+    if (finePointer) {
+      q('.cakes .card').forEach(function (card) {
+        var media = card.querySelector('.card__media');
+        var img = media.querySelector('img');
+        gsap.set(media, { transformPerspective: 900 });
+        var rx = gsap.quickTo(media, 'rotationX', { duration: 0.6, ease: 'power3.out' });
+        var ry = gsap.quickTo(media, 'rotationY', { duration: 0.6, ease: 'power3.out' });
+        var my = gsap.quickTo(media, 'y', { duration: 0.6, ease: 'power3.out' });
+        var ix = img ? gsap.quickTo(img, 'x', { duration: 0.8, ease: 'power3.out' }) : null;
+        var iy = img ? gsap.quickTo(img, 'y', { duration: 0.8, ease: 'power3.out' }) : null;
+        function move(e) {
+          var r = media.getBoundingClientRect();
+          var nx = (e.clientX - r.left) / r.width - 0.5, ny = (e.clientY - r.top) / r.height - 0.5;
+          rx(ny * -7); ry(nx * 9); my(-6);
+          if (ix) { ix(nx * -10); iy(ny * -10); }
+        }
+        function leave() { rx(0); ry(0); my(0); if (ix) { ix(0); iy(0); } }
+        card.addEventListener('pointermove', move);
+        card.addEventListener('pointerleave', leave);
+        cleanups.push(function () { card.removeEventListener('pointermove', move); card.removeEventListener('pointerleave', leave); });
+      });
+    }
+
+    // Add to order: a raspberry dot hops from the button into the header's order button
+    var cartTarget = document.querySelector('.header__order');
+    function flyToCart(e) {
+      var btn = e.target.closest('[data-add]');
+      if (!btn || !cartTarget) return;
+      var from = btn.getBoundingClientRect(), to = cartTarget.getBoundingClientRect();
+      var dot = document.createElement('span');
+      dot.className = 'cart-fly';
+      dot.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(dot);
+      var sx = from.left + from.width / 2, sy = from.top + from.height / 2;
+      var ex = to.right - 14, ey = to.top + 10;
+      gsap.set(dot, { x: sx, y: sy, xPercent: -50, yPercent: -50, scale: 0.4 });
+      var hop = Math.min(140, Math.max(60, Math.abs(sy - ey) * 0.25));
+      gsap.timeline({ onComplete: function () { dot.remove(); } })
+        .to(dot, { scale: 1, duration: 0.18, ease: 'back.out(3)' }, 0)
+        .to(dot, { x: ex, duration: 0.75, ease: 'power1.inOut' }, 0)
+        .to(dot, { y: Math.max(14, Math.min(sy, ey) - hop), duration: 0.32, ease: 'power2.out' }, 0) // stay on screen
+        .to(dot, { y: ey, duration: 0.43, ease: 'power2.in' }, 0.32)
+        .to(dot, { scale: 0.2, opacity: 0, duration: 0.15 }, 0.7)
+        .fromTo(cartTarget, { scale: 1 }, { scale: 1.08, duration: 0.12, yoyo: true, repeat: 1, ease: 'power2.out' }, 0.72);
+      gsap.fromTo(btn, { scale: 0.94 }, { scale: 1, duration: 0.5, ease: 'elastic.out(1, 0.45)' });
+    }
+    document.addEventListener('click', flyToCart);
+    cleanups.push(function () { document.removeEventListener('click', flyToCart); });
+
+    /* Story — photos open, each point draws its raspberry rule then its words */
+    gsap.fromTo('.story__hero', { clipPath: 'inset(16% 8% 0% 8% round 40px)' }, {
+      clipPath: 'inset(0% 0% 0% 0% round 40px)', duration: 1.4, ease: 'power3.out', clearProps: 'clipPath',
+      scrollTrigger: { trigger: '.story__hero', start: 'top 85%', once: true }
+    });
+    gsap.fromTo('.story__detail', { clipPath: 'inset(0% 100% 0% 0% round 24px)' }, {
+      clipPath: 'inset(0% 0% 0% 0% round 24px)', duration: 1.3, ease: 'power3.inOut', clearProps: 'clipPath',
+      scrollTrigger: { trigger: '.story__detail', start: 'top 88%', once: true }
+    });
+    q('.story__point').forEach(function (pt) {
+      gsap.timeline({ scrollTrigger: { trigger: pt, start: 'top 86%', once: true } })
+        .fromTo(pt, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power2.out' }, 0)
+        .fromTo(pt, { '--rule': 0 }, { '--rule': 1, duration: 0.8, ease: 'power3.inOut' }, 0.1)
+        .fromTo(pt.querySelector('p'), { opacity: 0, x: -10 }, { opacity: 1, x: 0, duration: 0.6, ease: 'power2.out' }, 0.35);
+    });
+
+    /* Custom orders — the form fills in field by field */
+    gsap.fromTo('.custom .field, .custom .form__actions', { opacity: 0, y: 22 }, {
+      opacity: 1, y: 0, duration: 0.6, ease: 'power2.out', stagger: 0.06,
+      scrollTrigger: { trigger: '.custom__formwrap', start: 'top 80%', once: true }
+    });
+    gsap.fromTo('.custom__fine', { opacity: 0, x: -16 }, {
+      opacity: 1, x: 0, duration: 0.7, ease: 'power2.out',
+      scrollTrigger: { trigger: '.custom__fine', start: 'top 90%', once: true }
+    });
+    // feedback: a short shake when something needs fixing, a soft rise when the request is sent
+    var form = document.querySelector('[data-form]');
+    var summary = document.querySelector('[data-form-summary]');
+    var success = document.querySelector('[data-form-success]');
+    function onSubmit() {
+      requestAnimationFrame(function () {
+        if (!summary.hidden) gsap.fromTo(summary, { x: -10 }, { x: 0, duration: 0.6, ease: 'elastic.out(1, 0.3)' });
+        if (!success.hidden) gsap.fromTo(success, { opacity: 0, y: 24, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.7, ease: 'power3.out' });
+      });
+    }
+    form.addEventListener('submit', onSubmit);
+    cleanups.push(function () { form.removeEventListener('submit', onSubmit); });
+
+    /* Reviews — the big quote fills in word by word as you read down; the others slide in */
+    var big = document.querySelector('.quote--lg blockquote p');
+    if (big && !big.dataset.split) {
+      big.dataset.split = '1';
+      big.innerHTML = big.textContent.split(/(\s+)/).map(function (w) {
+        return /^\s+$/.test(w) ? w : '<span class="rw">' + w + '</span>';
+      }).join('');
+    }
+    gsap.fromTo('.quote--lg', { opacity: 0, y: 30 }, {
+      opacity: 1, y: 0, duration: 0.8, ease: 'power2.out',
+      scrollTrigger: { trigger: '.quote--lg', start: 'top 88%', once: true }
+    });
+    gsap.fromTo('.quote--lg .rw', { opacity: 0.16 }, {
+      opacity: 1, ease: 'none', stagger: 0.1,
+      scrollTrigger: { trigger: '.quote--lg', start: 'top 80%', end: 'bottom 45%', scrub: 0.4 }
+    });
+    q('.quote:not(.quote--lg)').forEach(function (qt, i) {
+      gsap.timeline({ scrollTrigger: { trigger: qt, start: 'top 88%', once: true } })
+        .fromTo(qt, { opacity: 0, x: 50 }, { opacity: 1, x: 0, duration: 0.9, ease: 'power3.out', delay: i * 0.1 }, 0)
+        .fromTo(qt, { '--dash': 0 }, { '--dash': 1, duration: 0.6, ease: 'power2.out' }, 0.5);
+    });
+    gsap.fromTo('.quote--lg', { '--dash': 0 }, { '--dash': 1, duration: 0.6, ease: 'power2.out', scrollTrigger: { trigger: '.quote--lg figcaption', start: 'top 92%', once: true } });
+
+    /* Footer — columns rise in turn, the wordmark drifts up as the page ends */
+    gsap.fromTo('.footer__col', { opacity: 0, y: 30 }, {
+      opacity: 1, y: 0, duration: 0.7, ease: 'power2.out', stagger: 0.1,
+      scrollTrigger: { trigger: '.footer__grid', start: 'top 90%', once: true }
+    });
+    gsap.fromTo('.footer__mark', { y: 70 }, {
+      y: 0, ease: 'none',
+      scrollTrigger: { trigger: '.footer', start: 'top bottom', end: 'bottom bottom', scrub: true }
+    });
+    gsap.fromTo('.footer__end > *', { opacity: 0, y: 16 }, {
+      opacity: 1, y: 0, duration: 0.6, ease: 'power2.out', stagger: 0.1,
+      scrollTrigger: { trigger: '.footer__base', start: 'top 95%', once: true }
+    });
+
+    return function () { cleanups.forEach(function (fn) { fn(); }); };
+  }
+
   mm.add('(prefers-reduced-motion: no-preference)', function () {
     var hero = document.querySelector('.hero');
     var cakeImg = document.querySelector('.hero__cake-tilt img');
@@ -477,21 +650,15 @@
     });
 
     /* ---- Section reveals, once ---- */
-    ScrollTrigger.batch('[data-reveal]', {
+    ScrollTrigger.batch('[data-reveal]:not(.card):not(.story__point):not(.quote)', {
       start: 'top 88%',
       once: true,
       onEnter: function (els) {
         gsap.to(els, { opacity: 1, y: 0, duration: 0.8, ease: 'power2.out', stagger: 0.08, overwrite: true });
-        // product photos open like a box lid, then settle
-        els.forEach(function (el, i) {
-          var media = el.querySelector('.card__media');
-          if (!media) return;
-          gsap.fromTo(media, { clipPath: 'inset(18% 8% 0% 8% round 24px)' }, { clipPath: 'inset(0% 0% 0% 0% round 24px)', duration: 1.1, ease: 'power3.out', delay: i * 0.08, clearProps: 'clipPath' });
-          var img = media.querySelector('img');
-          if (img) gsap.fromTo(img, { scale: 1.18 }, { scale: 1, duration: 1.4, ease: 'power3.out', delay: i * 0.08 });
-        });
       }
     });
+
+    var endSectionMotion = sectionMotion();
 
     /* ---- Story photos: slow drift inside their frames ---- */
     q('.story__hero img, .story__detail img').forEach(function (img) {
@@ -505,7 +672,7 @@
     var mark = document.querySelector('.footer__mark');
     if (mark && !mark.dataset.split) {
       mark.dataset.split = '1';
-      mark.innerHTML = mark.textContent.split('').map(function (ch) { return '<span class="ch">' + ch + '</span>'; }).join('');
+      mark.innerHTML = mark.textContent.split('').map(function (ch) { return '<span class="ch" style="display:inline-block">' + ch + '</span>'; }).join('');
     }
     gsap.fromTo('.footer__mark .ch', { yPercent: 70, opacity: 0 }, {
       yPercent: 0, opacity: 1, duration: 1, ease: 'power3.out', stagger: 0.07,
@@ -513,6 +680,7 @@
     });
 
     return function () {
+      endSectionMotion();
       gsap.set('[data-reveal], .hero__note, [data-hero-foot], .hero__cake-tilt img, .hero__doily, .hero__shadow, .acc__in, .w > span', { clearProps: 'all' });
     };
   });
@@ -569,7 +737,10 @@
       pin: true,
       scrub: 0.6,
       animation: tl,
-      anticipatePin: 1
+      anticipatePin: 1,
+      // measure this pin before everything else: the space it adds pushes every later
+      // section down, and triggers measured without it would fire ~1.5 screens early
+      refreshPriority: 1
     });
   });
 
@@ -584,6 +755,8 @@
       animation: tl
     });
   });
+
+  ScrollTrigger.refresh();
 
   function firstCutTimeline() {
     gsap.set('.firstcut__word--whole, .firstcut__cap--whole, .firstcut__hint', { visibility: 'visible' });
