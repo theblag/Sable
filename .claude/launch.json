@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "sable", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "5178", "--directory", "/home/aditya-a/Downloads/sable"], "port": 5178 }
+  ]
+}
